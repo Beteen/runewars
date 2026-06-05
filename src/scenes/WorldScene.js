@@ -138,15 +138,21 @@ RW.WorldScene = class extends Phaser.Scene {
 
   createPlayerSprite() {
     const T = RW.TILE;
-    // Container holds body sprite + lightsaber
-    this.playerBody = this.add.image(0, 0, 'spr_player').setDisplaySize(T, T).setDepth(8);
-    this.saberImg = this.add.image(T * 0.28, -T * 0.05, 'spr_saber').setDisplaySize(6, T * 0.55).setDepth(9);
+    const px = this.player.tileX * T + T / 2;
+    const py = this.player.tileY * T + T / 2;
 
-    this.playerSprite = this.add.container(
-      this.player.tileX * T + T / 2,
-      this.player.tileY * T + T / 2,
-      [this.playerBody, this.saberImg],
-    ).setDepth(8);
+    if (RW.hasJedi) {
+      // Animated Jedi sprite (saber is part of the art). Anchored at the
+      // feet so varying frame heights keep the character grounded.
+      this.playerSprite = this.add.sprite(px, py, 'jedi', 'row0_0')
+        .setOrigin(0.5, 0.5).setScale(1).setDepth(8);
+      this.playerSprite.play('jedi_idle');
+    } else {
+      // Fallback: generated placeholder body + saber in a container.
+      this.playerBody = this.add.image(0, 0, 'spr_player').setDisplaySize(T, T).setDepth(8);
+      this.saberImg = this.add.image(T * 0.28, -T * 0.05, 'spr_saber').setDisplaySize(6, T * 0.55).setDepth(9);
+      this.playerSprite = this.add.container(px, py, [this.playerBody, this.saberImg]).setDepth(8);
+    }
 
     // Shadow under the player
     this.playerShadow = this.add.ellipse(
@@ -212,6 +218,7 @@ RW.WorldScene = class extends Phaser.Scene {
     const stepMs = 150;
     if (this.movePath.length && this.moveTimer >= stepMs) {
       this.moveTimer = 0;
+      const prevX = this.player.tileX;
       const next = this.movePath.shift();
       this.player.tileX = next.x;
       this.player.tileY = next.y;
@@ -220,19 +227,43 @@ RW.WorldScene = class extends Phaser.Scene {
       this.tweens.add({ targets: this.playerSprite, x: nx, y: ny, duration: stepMs, ease: 'Linear' });
       this.tweens.add({ targets: this.playerShadow, x: nx, y: ny + T * 0.1, duration: stepMs, ease: 'Linear' });
 
-      // Facing direction — flip sprite when moving left
-      if (this.movePath.length) {
-        const nextNext = this.movePath[0];
-        if (nextNext.x < next.x) this.playerBody.setFlipX(true);
-        else if (nextNext.x > next.x) this.playerBody.setFlipX(false);
-      }
+      // Face the direction of travel.
+      if (next.x < prevX) this.facePlayer(-1);
+      else if (next.x > prevX) this.facePlayer(1);
 
-      if (!this.movePath.length && this.pendingInteract) {
-        this.interact(this.pendingInteract);
-        this.pendingInteract = null;
+      this.playPlayerAnim('jedi_run');
+
+      if (!this.movePath.length) {
+        if (this.pendingInteract) {
+          this.interact(this.pendingInteract);
+          this.pendingInteract = null;
+        } else {
+          this.playPlayerAnim('jedi_idle');
+        }
       }
     }
     this.respawnNodes(time);
+  }
+
+  /* Flip the player to face left (-1) or right (1). */
+  facePlayer(dir) {
+    const flip = dir < 0;
+    if (this.playerSprite.setFlipX) this.playerSprite.setFlipX(flip);
+    else if (this.playerBody) this.playerBody.setFlipX(flip);
+  }
+
+  /* Play a Jedi animation if real art is loaded; no-op for the fallback.
+   * Won't restart an animation that's already playing (except attack). */
+  playPlayerAnim(key) {
+    if (!RW.hasJedi || !this.playerSprite.play) return;
+    if (key === 'jedi_attack') { this.playerSprite.play(key); return; }
+    if (this.playerSprite.anims.isPlaying &&
+        this.playerSprite.anims.currentAnim &&
+        this.playerSprite.anims.currentAnim.key === 'jedi_attack' &&
+        this.playerSprite.anims.isPlaying) {
+      return; // let an in-progress attack finish
+    }
+    this.playerSprite.play(key, true);
   }
 
   /* ---------- interaction ---------- */
@@ -260,6 +291,16 @@ RW.WorldScene = class extends Phaser.Scene {
   doFightRound(node) {
     if (node.dead) return;
     const p = this.player;
+
+    // Face the enemy and swing.
+    this.facePlayer(node.tileX < this.player.tileX ? -1 : 1);
+    if (RW.hasJedi && this.playerSprite.play) {
+      this.playerSprite.play('jedi_attack');
+      this.playerSprite.once('animationcomplete-jedi_attack', () => {
+        if (!this.fightTimer) this.playPlayerAnim('jedi_idle');
+      });
+    }
+
     const lvl = p.level('lightsaber');
     const hit = Phaser.Math.Between(0, Math.max(2, Math.floor(lvl / 2)) + 2);
     node.hp -= hit;
