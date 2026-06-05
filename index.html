@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RuneWars — A Galaxy of Skills</title>
+  <link rel="stylesheet" href="src/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+</head>
+<body>
+  <div id="game-shell">
+    <div id="game-container"></div>
+  </div>
+
+  <!-- Modules loaded in dependency order -->
+  <script src="src/data/skills.js"></script>
+  <script src="src/data/items.js"></script>
+  <script src="src/data/npcs.js"></script>
+  <script src="src/data/world.js"></script>
+  <script src="src/systems/save.js"></script>
+  <script src="src/systems/player.js"></script>
+  <script src="src/systems/pathfinding.js"></script>
+  <script src="src/ui/hud.js"></script>
+  <script src="src/scenes/BootScene.js"></script>
+  <script src="src/scenes/WorldScene.js"></script>
+  <script src="src/main.js"></script>
+</body>
+</html>

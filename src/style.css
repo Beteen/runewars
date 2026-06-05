@@ -1,0 +1,32 @@
+/* RuneWars — RS07-inspired chrome */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background: #0a0a0f;
+  color: #ffff00;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  overflow: hidden;
+  user-select: none;
+}
+
+#game-shell {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+#game-container canvas {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  display: block;
+}
+
+/* Phaser DOM text uses a retro runescape-ish look */
+.rs-font {
+  font-family: "Courier New", monospace;
+  text-shadow: 1px 1px 0 #000;
+}
